@@ -7,44 +7,52 @@ using UnityEngine;
 
 public class PathFinding : MonoBehaviour
 {
-    //where the search starts
-    public Transform seeker;
     //the destination
     public Transform target;
     //the evolution script
-    private EvolutiveSystem EvScript;
+    private Evolution EvScript;
     private bool pathFound = false;
-    private Grid usedGrid;
+    private Gridi usedGrid2;
+    private RobotGrid usedGrid1;
+    private Vector3 startPosition;
+    private Vector3 endPosition;
 
     //public Evolution evolutionScript;
-    private void Awake()
+    public void Awake()
     {
-        EvScript = GetComponent<EvolutiveSystem>();
-        usedGrid = GetComponent<Grid>();
+        EvScript = GetComponent<Evolution>();
+
+        usedGrid1 = GetComponent<RobotGrid>();
+        usedGrid2 = GetComponent<Gridi>();
         //if not already, makes the seeker position go to the origin
-        //seeker.transform.position = new Vector3(0, 0, 0);
+        startPosition = new Vector3(0, 0.1f, 0);
+
+        pathFound = false;
+        this.enabled = false;
     }
 
-    private void Start(){
+    public void activate() {
+        if(!GetComponent<MainUIController>().isCollectingData || GetComponent<CreateScene>().isCreatingTunnels){
+            endPosition = target.position;
+        }
 
-        //seeker = GameObject.Find("SphereRobot").transform;
+        this.enabled = true;
     }
 
     private void Update()
     {
         if(!pathFound)
-            FindPath(seeker.position, target.position);
-        
+            FindPath(endPosition, startPosition);   
     } 
 
     public List<Node> answerPath() {
-        return usedGrid.path;
+        return EvScript.isShowingFog ? usedGrid1.path : usedGrid2.path;
     }
 
     void FindPath(Vector3 startPos, Vector3 targetPos)
     {
-        Node startNode = usedGrid.NodeFromWorldPoint(startPos);
-        Node targetNode = usedGrid.NodeFromWorldPoint(targetPos);
+        Node startNode = EvScript.isShowingFog ? usedGrid1.NodeFromWorldPoint(startPos) : usedGrid2.NodeFromWorldPoint(startPos);
+        Node targetNode = EvScript.isShowingFog ? usedGrid1.NodeFromWorldPoint(targetPos) : usedGrid2.NodeFromWorldPoint(targetPos);
         
         // we use the openSet list to search for nodes that are yet to be explored
         List<Node> openSet = new List<Node>();
@@ -59,14 +67,14 @@ public class PathFinding : MonoBehaviour
         {
             // this loop searches for the best term within openSet to be explored
             Node currentNode = openSet[0];
-            for(int i =1; i <openSet.Count; i++)
+            for(int i = 1; i <openSet.Count; i++)
             {
                 if (openSet[i].fCost < currentNode.fCost || openSet[i].fCost == currentNode.fCost && openSet[i].hCost < currentNode.hCost)
                 {
                     currentNode = openSet[i];
                 }
             }
- 
+
             openSet.Remove(currentNode); 
             closedSet.Add(currentNode);
 
@@ -78,14 +86,15 @@ public class PathFinding : MonoBehaviour
                 return;
             }
 
-            foreach (Node neighbour in usedGrid.GetNeighbours(currentNode))
+            List<Node> neighbours = EvScript.isShowingFog ? usedGrid1.GetNeighbours(currentNode, false) : usedGrid2.GetNeighbours(currentNode, false);
+            foreach (Node neighbour in neighbours)
             {
-                if(!neighbour.walkable || closedSet.Contains(neighbour))
+                if(closedSet.Contains(neighbour))
                 {
                     continue;
                 }
 
-                int newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour);
+                float newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour);
                 if (newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour))
                 {
                     neighbour.gCost = newMovementCostToNeighbour;
@@ -112,9 +121,15 @@ public class PathFinding : MonoBehaviour
         }
 
         // The path is traced from end to beginning, so the array is reversed
-        path.Reverse();
+        //path.Reverse();
+        if(EvScript.isShowingFog){
 
-        usedGrid.path = path;
+            usedGrid1.path = path;
+        } else {
+
+            usedGrid2.path = path;
+        }
+
     }
 
     // In A* 2d the distance formula is based on the module of the vectors (0, 10) and (10, 0) which have module 10. 
@@ -130,5 +145,12 @@ public class PathFinding : MonoBehaviour
         // which has an approximate modulus of 17.
 
         return sortedValues[0] * 17 + (sortedValues[1] - sortedValues[0]) * 14 + (sortedValues[2] - sortedValues[1]) * 10;
+    }
+
+    public void ChangePath(Vector3 newStartPosition){
+
+        startPosition = newStartPosition;
+        pathFound = false;
+
     }
 }

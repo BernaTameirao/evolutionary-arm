@@ -1,0 +1,40 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="MainScreen" style="flex-grow: 1; background-color: rgba(53, 53, 53, 0); flex-direction: column; justify-content: space-between; align-items: stretch;">
+        <ui:VisualElement style="flex-grow: 1; flex-direction: row; align-items: flex-start; justify-content: space-between;">
+            <ui:Foldout text="Data" name="DataFoldOut" style="color: rgb(215, 215, 215); height: 7%; align-self: auto; justify-content: flex-start; align-items: flex-start; flex-direction: column;">
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="TimeElap" style="color: rgb(215, 215, 215);" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="MaxGen" style="color: rgb(215, 215, 215);" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="NumJoints" style="color: rgb(215, 215, 215);" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="PopSize" style="color: rgb(215, 215, 215);" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="MaxStep" style="color: rgb(215, 215, 215);" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="GenPerObj" style="color: rgb(215, 215, 215);" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SegLen" style="color: rgb(215, 215, 215);" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="MinObstDist" style="color: rgb(215, 215, 215);" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="SimulationCounter" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="WhichFitness" />
+                <ui:Label tabindex="-1" text="Label" parse-escape-sequences="true" display-tooltip-when-elided="true" name="FPSCounter" style="color: rgb(215, 215, 215);" />
+            </ui:Foldout>
+            <ui:DropdownField index="-1" choices="System.Collections.Generic.List`1[System.String]" name="EvaluationTypes" focusable="false" style="align-self: flex-start; max-width: 30%; flex-direction: row; align-items: auto; justify-content: flex-start;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; min-width: auto; min-height: auto; max-height: 16%;">
+            <ui:VisualElement name="ToolBar" style="flex-grow: 1; max-height: 50%; height: auto; background-color: rgba(0, 0, 0, 0.4); justify-content: center; align-self: auto; flex-direction: row; border-left-color: rgb(180, 180, 180); border-right-color: rgb(180, 180, 180); border-top-color: rgb(180, 180, 180); border-bottom-color: rgb(180, 180, 180); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 0; border-left-width: 1px; align-items: auto; padding-right: 20px; padding-left: 20px;">
+                <ui:Button text="ResetAStar" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ResetAStar" focusable="false" style="align-self: center;" />
+                <ui:Button text="ShowPath" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ShowPath" focusable="false" style="align-self: center;" />
+                <ui:Button text="FogOfWar" parse-escape-sequences="true" display-tooltip-when-elided="true" name="FogOfWar" focusable="false" style="align-self: center;" />
+                <ui:SliderInt picking-mode="Ignore" value="50" high-value="100" name="NumObstacles" focusable="false" low-value="1" style="max-width: 55%; align-self: center; color: rgb(214, 214, 214); font-size: 18px; -unity-text-align: upper-left; align-items: stretch; justify-content: flex-start;" />
+                <ui:Button text="ChangeObstacles" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ChangeObstacles" focusable="false" style="align-self: center; max-height: none; width: 150px;" />
+                <ui:Button text="CollectData" parse-escape-sequences="true" display-tooltip-when-elided="true" name="CollectData" focusable="false" style="align-self: center; max-height: none; width: auto;" />
+            </ui:VisualElement>
+            <ui:VisualElement name="ToolBar2" style="flex-grow: 1; max-height: 50%; height: auto; background-color: rgba(0, 0, 0, 0.4); justify-content: center; align-self: auto; flex-direction: row; border-left-color: rgb(180, 180, 180); border-right-color: rgb(180, 180, 180); border-top-color: rgb(180, 180, 180); border-bottom-color: rgb(180, 180, 180); border-top-width: 0; border-right-width: 1px; border-bottom-width: 0; border-left-width: 1px; align-items: auto; padding-right: 20px; padding-left: 20px;">
+                <ui:IntegerField value="-1" name="NumGeneration" focusable="true" style="align-self: center; max-width: 13%;" />
+                <ui:Button text="ChangeGeneration" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ChangeGeneration" enable-rich-text="true" focusable="false" style="align-self: center; max-height: none; max-width: none; width: 150px;" />
+                <ui:IntegerField value="100" name="NumPopulation" focusable="true" style="align-self: center; max-width: 13%;" />
+                <ui:Button text="ChangePopulation" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ChangePopulation" focusable="false" style="align-self: center; max-height: none; width: 150px;" />
+                <ui:IntegerField value="2" name="MaxStep" focusable="true" style="align-self: center; max-width: 13%;" />
+                <ui:Button text="ChangeStep" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ChangeMaxStep" focusable="false" style="align-self: center; max-height: none; width: 150px;" />
+                <ui:IntegerField value="30" name="NumSegments" focusable="true" style="align-self: center; max-width: 13%;" />
+                <ui:Button text="ChangeNumSegments" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ChangeNumSegments" enable-rich-text="true" focusable="false" style="align-self: center; max-height: none; max-width: none; width: 170px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

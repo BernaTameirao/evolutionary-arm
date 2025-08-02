@@ -4,38 +4,45 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Grid : MonoBehaviour
+public class Gridi : MonoBehaviour
 {
     public LayerMask unwalkableMask;    //layer designated for obstacles
-    public Vector3 gridWorldSize;   
     public float nodeRadius;
     Node[,,] grid;
+    public int layers; //how many layers of distance to consider when looking at obstacles, it means that if the layers is set to 3, there will be a 3 node distance from obstacles until it is not anymore calculated
 
     public List<Node> path;
+    private Vector3 gridWorldSize;
+    public float nodeDiameter;
+    public int gridSizeX, gridSizeY, gridSizeZ;
 
-    float nodeDiameter;
-    int gridSizeX, gridSizeY, gridSizeZ;
+    private Material gridMaterial;
+    private bool enabled = false;
 
-    private void Start()    //takes the values ​​set in unity and passes the values ​​to private variables
+    private void Awake()    //takes the values ​​set in unity and passes the values ​​to private variables
 
     {
+        gridWorldSize = GetComponent<CreateScene>().worldSize;
         nodeDiameter = nodeRadius * 2;
         gridSizeX = Mathf.RoundToInt(gridWorldSize.x / nodeDiameter);
         gridSizeY = Mathf.RoundToInt(gridWorldSize.y / nodeDiameter);
         gridSizeZ = Mathf.RoundToInt(gridWorldSize.z / nodeDiameter);
-
-        createGrid();
     }
 
-    void createGrid()   //creation of the array that stores each cube of the collision
-
+    private void Start()
     {
-        grid = new Node[gridSizeX, gridSizeY, gridSizeZ];
+        gridMaterial = new Material(Shader.Find("Sprites/Default"));
+    }
 
+
+    public void createGrid()   //creation of the array that stores each cube of the collision
+
+    {   
+        grid = new Node[gridSizeX, gridSizeY, gridSizeZ];
+        
         // worldBottomLeft is in one of the corners of the grid
         // and will be the reference to get the position of objects within the grid
         Vector3 worldBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 - Vector3.forward * gridWorldSize.z / 2 - Vector3.up * gridWorldSize.y / 2;
-
         for (int x = 0; x < gridSizeX; x++)
         {
             for (int y = 0; y < gridSizeY; y++)
@@ -44,13 +51,176 @@ public class Grid : MonoBehaviour
                 {
                     Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (z * nodeDiameter + nodeRadius) + Vector3.up * (y * nodeDiameter + nodeRadius);
                     bool walkable = !(Physics.CheckSphere(worldPoint, nodeRadius, unwalkableMask));
-                    grid[x, y, z] = new Node(walkable, worldPoint, x, y, z);
+                    grid[x, y, z] = new Node(walkable, worldPoint, x, y, z, layers);
+                }
+            }
+        }
+
+        // with the grid created, I will now add the layers 
+        for(int i = layers; i > 0; i--) {
+            for (int x = 0; x < gridSizeX; x++)
+            {
+                for (int y = 0; y < gridSizeY; y++)
+                {
+                    for (int z = 0; z < gridSizeZ; z++) 
+                    {
+                        if((grid[x, y, z]).layer == i + 1) {//it means it is an obstacle or the previous layer and the neighbours need to be considered
+                            List <Node> nrs = GetNeighbours(grid[x, y, z], true);
+                            //grid[x, y, z].neighbours = GetNeighbours(grid[x, y, z], true);
+                            foreach(Node element in /*grid[x, y, z].neighbours*/ nrs) {
+                                if(element.layer == 0) {
+                                    element.layer = i;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
-    public List<Node> GetNeighbours(Node node)
+    private Vector3 GetInfluenceArea(GameObject obj, int extra){
+
+        Vector3 objectSize = obj.GetComponent<Renderer>().bounds.size;
+
+        int localSizeX = Mathf.RoundToInt((objectSize.x)/nodeDiameter) + extra;
+        int localSizeY = Mathf.RoundToInt((objectSize.y)/nodeDiameter) + extra;
+        int localSizeZ = Mathf.RoundToInt((objectSize.z)/nodeDiameter) + extra;
+
+        return new Vector3(
+            localSizeX,
+            localSizeY,
+            localSizeZ
+        );
+    }
+
+
+    public void RecreateGrid(GameObject obj) {
+
+        Vector3 influenceArea = GetInfluenceArea(obj, layers);
+        Vector3 objectSize = obj.GetComponent<Renderer>().bounds.size;
+
+        Vector3 lastPosition = obj.GetComponent<CheckMovement>().getLastPosition();
+        Node lastPositionNode = NodeFromWorldPoint(lastPosition);
+
+        int[] auxX = new int[2]{
+            Mathf.RoundToInt(lastPositionNode.gridX - influenceArea.x/2),
+            Mathf.RoundToInt(lastPositionNode.gridX + influenceArea.x/2)
+        };
+
+        int[] auxY = new int[2]{
+            Mathf.RoundToInt(lastPositionNode.gridY - influenceArea.y/2),
+            Mathf.RoundToInt(lastPositionNode.gridY + influenceArea.y/2)
+        };
+
+        int[] auxZ = new int[2]{
+            Mathf.RoundToInt(lastPositionNode.gridZ - influenceArea.z/2),
+            Mathf.RoundToInt(lastPositionNode.gridZ + influenceArea.z/2)
+        };
+
+        Vector3 worldBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 - Vector3.forward * gridWorldSize.z / 2 - Vector3.up * gridWorldSize.y / 2;
+        //Vector3 lastAreaBottomLeft = lastPosition - Vector3.right * objectSize.x / 2 - Vector3.forward * objectSize.z / 2 - Vector3.up * objectSize.y / 2;
+
+        for (int x = auxX[0]; x < auxX[1]; x++)
+        {
+            for (int y = auxY[0]; y < auxY[1]; y++)
+            {
+                for (int z = auxZ[0]; z < auxZ[1]; z++) 
+                {   
+                    if(x >= 0 && x < gridSizeX && y >= 0 && y < gridSizeY && z >= 0 && z < gridSizeZ){
+                        Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (z * nodeDiameter + nodeRadius) + Vector3.up * (y * nodeDiameter + nodeRadius);
+                        bool walkable = !(Physics.CheckSphere(worldPoint, nodeRadius, unwalkableMask));
+                        grid[x, y, z] = new Node(walkable, worldPoint, x, y, z, layers);
+                        //Debug.DrawRay(worldPoint, Vector3.up * 0.1f, Color.green, 100f);
+                    }
+                }
+            }
+        }
+
+        for(int i = layers; i > 0; i--) {
+            for (int x = auxX[0]; x < auxX[1]; x++)
+            {
+                for (int y = auxY[0]; y < auxY[1]; y++)
+                {
+                    for (int z = auxZ[0]; z < auxZ[1]; z++) 
+                    {
+                        if(x >= 0 && x < gridSizeX && y >= 0 && y < gridSizeY && z >= 0 && z < gridSizeZ){
+                            if((grid[x, y, z]).layer == i + 1) {//it means it is an obstacle or the previous layer and the neighbours need to be considered
+                                //List <Node> nrs = GetNeighbours(grid[x, y, z], true);
+                                grid[x, y, z].neighbours = GetNeighbours(grid[x, y, z], true);
+                                foreach(Node element in grid[x, y, z].neighbours) {
+                                    if(element.layer == 0) {
+                                        element.layer = i;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Vector3 currentPosition = obj.transform.position;
+        Node currentPositionNode = NodeFromWorldPoint(currentPosition);
+
+        auxX = new int[2]{
+            Mathf.RoundToInt(currentPositionNode.gridX - influenceArea.x/2),
+            Mathf.RoundToInt(currentPositionNode.gridX + influenceArea.x/2)
+        };
+
+        auxY = new int[2]{
+            Mathf.RoundToInt(currentPositionNode.gridY - influenceArea.y/2),
+            Mathf.RoundToInt(currentPositionNode.gridY + influenceArea.y/2)
+        };
+
+        auxZ = new int[2]{
+            Mathf.RoundToInt(currentPositionNode.gridZ - influenceArea.z/2),
+            Mathf.RoundToInt(currentPositionNode.gridZ + influenceArea.z/2)
+        };
+
+        //Vector3 currentAreaBottomLeft = currentPosition - Vector3.right * objectSize.x / 2 - Vector3.forward * objectSize.z / 2 - Vector3.up * objectSize.y / 2;
+
+        for (int x = auxX[0]; x < auxX[1]; x++)
+        {
+            for (int y = auxY[0]; y < auxY[1]; y++)
+            {
+                for (int z = auxZ[0]; z < auxZ[1]; z++) 
+                {   
+                    if(x >= 0 && x < gridSizeX && y >= 0 && y < gridSizeY && z >= 0 && z < gridSizeZ){
+                        Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (z * nodeDiameter + nodeRadius) + Vector3.up * (y * nodeDiameter + nodeRadius);
+                        bool walkable = !(Physics.CheckSphere(worldPoint, nodeRadius, unwalkableMask));
+                        grid[x, y, z] = new Node(walkable, worldPoint, x, y, z, layers);
+                        //Debug.DrawRay(worldPoint, Vector3.up * 0.1f, Color.red, 100f);
+                    }
+                }
+            }
+        }
+
+        for(int i = layers; i > 0; i--) {
+            for (int x = auxX[0]; x < auxX[1]; x++)
+            {
+                for (int y = auxY[0]; y < auxY[1]; y++)
+                {
+                    for (int z = auxZ[0]; z < auxZ[1]; z++) 
+                    {
+                        if(x >= 0 && x < gridSizeX && y >= 0 && y < gridSizeY && z >= 0 && z < gridSizeZ){
+                            if((grid[x, y, z]).layer == i + 1) {//it means it is an obstacle or the previous layer and the neighbours need to be considered
+                                //List <Node> nrs = GetNeighbours(grid[x, y, z], true);
+                                grid[x, y, z].neighbours = GetNeighbours(grid[x, y, z], true);
+                                foreach(Node element in grid[x, y, z].neighbours) {
+                                    if(element.layer == 0) {
+                                        element.layer = i;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public List<Node> GetNeighbours(Node node, bool getObstacles)
     {
         List<Node> neighbours = new List<Node>();
 
@@ -66,7 +236,7 @@ public class Grid : MonoBehaviour
                     int checkY = node.gridY + y;
                     int checkZ = node.gridZ + z;
 
-                    if(checkX >= 0 && checkX < gridSizeX && checkY>=0 && checkY< gridSizeY && checkZ >= 0 && checkZ < gridSizeZ)
+                    if((checkX >= 0 && checkX < gridSizeX && checkY>=0 && checkY< gridSizeY && checkZ >= 0 && checkZ < gridSizeZ) && (getObstacles || grid[checkX, checkY, checkZ].walkable))
                     {
                         neighbours.Add(grid[checkX, checkY, checkZ]);
                     }
@@ -92,25 +262,98 @@ public class Grid : MonoBehaviour
         int z = Mathf.RoundToInt((gridSizeZ - 1) * percentZ);
         
         return grid[x, y, z];
-
     }
-    private void OnDrawGizmos() //grid drawing, representing collisions in red and free path in white
+
+    private void OnRenderObject()
     {
-        Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, gridWorldSize.y, gridWorldSize.z));
-        if (grid != null)
+        if (path == null || !enabled)
+            return;
+
+        // Activate the material
+        gridMaterial.SetPass(0);
+
+        GL.Begin(GL.QUADS); // Begin drawing quads
+        foreach (Node node in path)
         {
-            
-            foreach (Node node in grid)
+
+            // Set color based on the node state
+            Color color = Color.blue;
+            GL.Color(color);
+
+            // Draw the quad for the node
+            Vector3 position = node.worldPosition;
+            float size = nodeDiameter * 0.9f;
+            GL.Vertex(position + new Vector3(-size, 0, -size)); // Bottom-left
+            GL.Vertex(position + new Vector3(size, 0, -size));  // Bottom-right
+            GL.Vertex(position + new Vector3(size, 0, size));   // Top-right
+            GL.Vertex(position + new Vector3(-size, 0, size));  // Top-left
+        }
+        GL.End(); // End drawing
+    }
+
+    public void setEnabled(bool newState){
+
+        enabled = newState;
+    }
+
+    public List<Node> GetAllNodes(){
+
+        List<Node> flatList = new List<Node>();
+
+        for (int i = 0; i < grid.GetLength(0); i++)
+        {
+            for (int j = 0; j < grid.GetLength(1); j++)
             {
-                // using 0f for transparency on free paths can ensure better visualization
-                Color color = (node.walkable) ? new Color(0f, 0f, 0f, 0f) : new Color(0f, 0f, 0f, 0.9f); 
-                if(path != null)
+                for (int k = 0; k < grid.GetLength(2); k++)
                 {
-                    if (path.Contains(node)) color = Color.blue;
+                    flatList.Add(grid[i, j, k]);
                 }
-                Gizmos.color = color;
-                Gizmos.DrawCube(node.worldPosition, Vector3.one * nodeDiameter * 0.9f);
             }
         }
+
+        return flatList;
     }
+
+    public List<Node> GetObstacleNodes(GameObject obj){
+
+        Vector3 influenceArea = GetInfluenceArea(obj, 0);
+        Vector3 objectSize = obj.GetComponent<Renderer>().bounds.size;
+
+        List<Node> obstacleNodes = new List<Node>();
+
+        Vector3 currentPosition = obj.transform.position;
+        Node currentPositionNode = NodeFromWorldPoint(currentPosition);
+
+        int[] auxX = new int[2]{
+            Mathf.RoundToInt(currentPositionNode.gridX - influenceArea.x/2),
+            Mathf.RoundToInt(currentPositionNode.gridX + influenceArea.x/2)
+        };
+
+        int[] auxY = new int[2]{
+            Mathf.RoundToInt(currentPositionNode.gridY - influenceArea.y/2),
+            Mathf.RoundToInt(currentPositionNode.gridY + influenceArea.y/2)
+        };
+
+        int[] auxZ = new int[2]{
+            Mathf.RoundToInt(currentPositionNode.gridZ - influenceArea.z/2),
+            Mathf.RoundToInt(currentPositionNode.gridZ + influenceArea.z/2)
+        };
+
+        for (int x = auxX[0]; x < auxX[1]; x++)
+        {
+            for (int y = auxY[0]; y < auxY[1]; y++)
+            {
+                for (int z = auxZ[0]; z < auxZ[1]; z++) 
+                {   
+                    if(x >= 0 && x < gridSizeX && y >= 0 && y < gridSizeY && z >= 0 && z < gridSizeZ){
+                        
+                        obstacleNodes.Add(grid[x, y, z]);
+                    }
+                }
+            }
+        }
+
+        return obstacleNodes;
+    }
+
 }

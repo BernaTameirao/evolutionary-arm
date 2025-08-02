@@ -20,7 +20,7 @@ public class EvolutiveSystem : MonoBehaviour
     private Queue<Node> pathQueue;
 
     private int generation = 0;
-    public int generationsPerObjective = 200;
+    public int generationsPerObjective = 100;
 
     void Awake()
     {
@@ -109,6 +109,20 @@ public class EvolutiveSystem : MonoBehaviour
 
         //Debug.Log(population[0][0]+"3");
     }
+
+    /*void newPopulation(){
+        // Generate new population
+        if(generation % 100 == 0) {
+            mutRate = Mathf.Max((mutRate + 1) % N, 1);//the mutation keeps changing every 100 generations and it means the number of joint that are gonna be changed
+        }
+        for (int i = 0; i < popSize; i++){
+            for (int j = 0; j < mutRate; j++){
+                int idx = Random.Range(0, N);//a random index is generated
+                float angle = Random.Range(-maxStep + robotState[idx], maxStep + robotState[idx]);
+                popStates[i][idx] = angle;
+            }
+        }
+    }*/
 
     Vector3[][] Reproduction(Vector3[][] population, Vector3[] bestOfAll){
         
