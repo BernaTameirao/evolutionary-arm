@@ -19,7 +19,7 @@ public class RobotGrid : MonoBehaviour
     private int numberSegments;
 
     private Material gridMaterial;
-    private bool enabled = true;
+    private bool enabled = false;
 
     private void Awake()    //takes the values ​​set in unity and passes the values ​​to private variables
 
@@ -356,65 +356,4 @@ public class RobotGrid : MonoBehaviour
 
         enabled = newState;
     }
-
-    public List<Node> GetAllNodes(){
-
-        List<Node> flatList = new List<Node>();
-
-        for (int i = 0; i < grid.GetLength(0); i++)
-        {
-            for (int j = 0; j < grid.GetLength(1); j++)
-            {
-                for (int k = 0; k < grid.GetLength(2); k++)
-                {
-                    flatList.Add(grid[i, j, k]);
-                }
-            }
-        }
-
-        return flatList;
-    }
-
-    public List<Node> GetObstacleNodes(GameObject obj){
-
-        Vector3 influenceArea = GetInfluenceArea(obj, 0);
-        Vector3 objectSize = obj.GetComponent<Renderer>().bounds.size;
-
-        List<Node> obstacleNodes = new List<Node>();
-
-        Vector3 currentPosition = obj.transform.position;
-        Node currentPositionNode = NodeFromWorldPoint(currentPosition);
-
-        int[] auxX = new int[2]{
-            Mathf.RoundToInt(currentPositionNode.gridX - influenceArea.x/2),
-            Mathf.RoundToInt(currentPositionNode.gridX + influenceArea.x/2)
-        };
-
-        int[] auxY = new int[2]{
-            Mathf.RoundToInt(currentPositionNode.gridY - influenceArea.y/2),
-            Mathf.RoundToInt(currentPositionNode.gridY + influenceArea.y/2)
-        };
-
-        int[] auxZ = new int[2]{
-            Mathf.RoundToInt(currentPositionNode.gridZ - influenceArea.z/2),
-            Mathf.RoundToInt(currentPositionNode.gridZ + influenceArea.z/2)
-        };
-
-        for (int x = auxX[0]; x < auxX[1]; x++)
-        {
-            for (int y = auxY[0]; y < auxY[1]; y++)
-            {
-                for (int z = auxZ[0]; z < auxZ[1]; z++) 
-                {   
-                    if(x >= 0 && x < gridSizeX && y >= 0 && y < gridSizeY && z >= 0 && z < gridSizeZ){
-                        
-                        obstacleNodes.Add(grid[x, y, z]);
-                    }
-                }
-            }
-        }
-
-        return obstacleNodes;
-    }
-
 }

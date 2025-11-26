@@ -18,7 +18,6 @@ public class Node
 
     public Node parent;
     public List<Node> neighbours;
-    //public GameObject obstacle;
 
     public int layer; //later added for the 3d arm project, usedd to indicate if it is part of a layer 
 
@@ -29,8 +28,7 @@ public class Node
         this.gridX = _gridX;
         this.gridY = _gridY;
         this.gridZ = _gridZ;
-        this.layer = 0;//0 means a blank node, with no layer. not to be confuded with the unity layer, this is a node not a gameobject!
-        //this.obstacle = _obstacle;
+        this.layer = 0; //0 means a blank node, with no layer. not to be confuded with the unity layer, this is a node not a gameobject!
         if (_walkable == false)
             this.layer = layers + 1;//layers + 1 will represent an obstacle
     }

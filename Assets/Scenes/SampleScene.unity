@@ -245,7 +245,7 @@ MonoBehaviour:
   obstaclesList: []
   obstaclesListFound: []
   whichFitness: 1
-  isShowingFog: 1
+  isShowingFog: 0
 --- !u!114 &341904126
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -267,7 +267,7 @@ MonoBehaviour:
   segmentPrefab: {fileID: 430249360}
   jointPrefab: {fileID: 401861988}
   endPrefab: {fileID: 1130205016}
-  isCreatingTunnels: 0
+  isCreatingTunnels: 1
 --- !u!114 &341904127
 MonoBehaviour:
   m_ObjectHideFlags: 0

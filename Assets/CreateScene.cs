@@ -4,18 +4,18 @@ using UnityEngine;
 
 public class CreateScene : MonoBehaviour
 {
-    public GameObject robotBase;
     private Evolution EvScript; //so that it can call the evolution script after everyithing is set up
     private PathFinding PathFind; //so that it can call the pathfinding algorithm after everything is set up
-    //private DStarPathFinding dstarScript;
     private Gridi Gridi;
     private RobotGrid RobotGridScript;
+    
     public Vector3 worldSize;
-    public GameObject obstaclePrefab; 
     public int N;
     public float distJoints;
     public int numObstacles = 20;
 
+    public GameObject robotBase;
+    public GameObject obstaclePrefab; 
     public GameObject segmentPrefab;   // Prefab to spawn
     public GameObject jointPrefab;
     public GameObject endPrefab;
@@ -35,21 +35,21 @@ public class CreateScene : MonoBehaviour
     }
 
     void Start(){
-
-        EvScript = GetComponent<Evolution>();//gets the scripts
+        //gets the scripts
+        EvScript = GetComponent<Evolution>();
         PathFind = GetComponent<PathFinding>();
         Gridi = GetComponent<Gridi>();
-
-        //Mudança Fog of War
         RobotGridScript = GetComponent<RobotGrid>();
-        //dstarScript = GetComponent<DStarPathFinding>();
 
-        createRandomObstacles(numObstacles);//creates random obstacles, this will eventually be substituted by reading gameobjects from a save file like the 2d version
+        createRandomObstacles(numObstacles, !isCreatingTunnels);//creates random obstacles
         PathFind.activate();//activates the pathfind that will eventually activate the evolution script
     }
 
+    /// <summary>
+    /// Destroy the objects that compose the robotic arm.
     public void destroyRobotArm(){
-
+        
+        // Loops through the array that stores the game objects and destroys them.
         for(int counter=0; counter<2; counter++){
             for(int counter2=0; counter2<N; counter2++){
 
@@ -63,36 +63,13 @@ public class CreateScene : MonoBehaviour
         Destroy(spawnedObjects[2, 0]);
     }
 
-    /*public void createRandomObstacles(int n) {
-        //this will create random obstacles inside the grid sizes and add them to the evolution osbtacle list
-        //for this i need to get a random x, y, z inside the real grid
-        float sizeX = worldSize.x/2;
-        float sizeY = worldSize.y/2;
-        float sizeZ = worldSize.z/2;
-    
-        for(int i = 0; i < n; i++) {
-
-            float aux1 = Random.value;
-            float aux2 = Random.value;
-
-            GameObject newObstacle = Instantiate(obstaclePrefab, new Vector3(aux1 < 0.5f ? Random.Range(-sizeX, -0.3f) : Random.Range(0.3f, sizeX), 
-                                                                            Random.Range(0f, sizeY), 
-                                                                            aux2 < 0.5f ? Random.Range(-sizeZ, -0.3f) : Random.Range(0.3f, sizeZ)), Quaternion.identity);
-
-            EvScript.addObstacle(newObstacle);
-        }
-
-        //GetComponent<HollowTube>().InitializeTube(new Vector3(0, 1.5f, 1.5f), 0.3f, 3);
-
-        Gridi.createGrid();
-        //Mudança Fog of War
-        RobotGridScript.createGrid();
-        //dstarScript.Initialize();
-
-    }*/
-
+    /// <summary>
+    /// Gets an object to be used as an obstacle.
+    /// <returns>
+    /// obstacle (GameObject)
     public GameObject GetObstacleFromPool()
     {
+        // Loops through the obstaclePool list, and if there is an obstacle avaliable, set it to active.
         foreach (GameObject obstacle in obstaclePool)
         {
             if (!obstacle.activeInHierarchy)
@@ -102,75 +79,93 @@ public class CreateScene : MonoBehaviour
             }
         }
 
-        // Se não tiver nenhum disponível, cria um novo
+        // If there is no obstacle avaliable to be used, creates a new one.
         GameObject newObstacle = Instantiate(obstaclePrefab);
-        //newObstacle.layer = 3;
-        //newObstacle.AddComponent<CheckMovement>();
+
+        // Adds it to the list.
         obstaclePool.Add(newObstacle);
         return newObstacle;
     }
 
-    public void createRandomObstacles(int n)
+    /// <summary>
+    /// Creates randomly placed obstacles.
+    /// <parameters>
+    /// n (int): Number of obstacles to be created.
+    /// mode (bool): Bool that defines if the obstacles will be random, or in the shape of a tunnel.
+    public void createRandomObstacles(int n, bool mode)
     {
+        // Gets the grid bounds
         float sizeX = worldSize.x / 2;
         float sizeY = worldSize.y / 2;
         float sizeZ = worldSize.z / 2;
         
-        if(!isCreatingTunnels){
+        // If mode is True, randomly placed cubes will be created.
+        if(mode){
             for (int i = 0; i < n; i++)
             {
-
+                
+                // Gets a random position for the obstacle.
                 float randomX = Random.Range(-sizeX, sizeX);
                 float randomY = Random.Range(0f, sizeY);
                 float randomZ = Random.Range(-sizeZ, sizeZ);
 
+                // Constraint that prevents the obstacle from spawning inside the robotic arm position.
                 if(randomX > -0.3f && randomX < 0.3f){
                     
                     float aux = Random.value;
                     randomZ = aux < 0.5f ? Random.Range(-sizeZ, -0.3f) : Random.Range(0.3f, sizeZ);
                 }
 
+                // Gets the obstacle from the obstacle pool list, and assigns the position to it.
                 GameObject obstacle = GetObstacleFromPool();
                 obstacle.transform.position = new Vector3(randomX, randomY, randomZ);
                 obstacle.transform.rotation = Quaternion.identity;
                 EvScript.addObstacle(obstacle);
             }
+
+        // If mode is False, a randomly placed tunnel will be created.
         } else {
 
             float aux1 = Random.value;
             float aux2 = Random.value;
 
+            // Gets a random position for the tunnel.
             float randomX = aux1 < 0.5f ? Random.Range(-sizeX, -0.5f) : Random.Range(0.5f, sizeX);
             float randomY = Random.Range(1.5f, sizeY);
             float randomZ = aux2 < 0.5f ? Random.Range(-sizeZ, -0.5f) : Random.Range(0.5f, sizeZ);
 
-            GetComponent<HollowTube>().InitializeTube(new Vector3(randomX, randomY, randomZ), 0.3f, 2);
-            EvScript.goal.transform.position = new Vector3(randomX, randomY, randomZ+0.9f);
+            // Creates the tunnel.
+            GetComponent<HollowTube>().BuildTubeSystem(new Vector3(randomX, randomY, randomZ), 0.5f, 2);
         }
 
         Physics.SyncTransforms();
 
+        // Creates both grids.
         Gridi.createGrid();
-        //Mudança Fog of War
         RobotGridScript.createGrid();
     }
 
+    /// <summary>
+    /// Spawns the GameObjects that will compose the robotic arm.
     public void spawnObject()
     {
         spawnedObjects = new GameObject[3, N];
 
+        // Get the prefab of the objects
         GameObject newJoint = jointPrefab;
         GameObject newSegment = segmentPrefab;
+        
+        // Uses the base position as the first spawn position
         Vector3 spawnPosition = robotBase.transform.GetChild(0).position; // Base of the robot
 
         for(int counter=0; counter<N; counter++){
             
+            // Get the position that the object should be
             spawnPosition += Vector3.up * distJoints;
 
             // Instantiate the new objects
             newJoint = Instantiate(jointPrefab, spawnPosition, Quaternion.identity);
             newSegment  = Instantiate(segmentPrefab, newJoint.transform.position, Quaternion.identity);
-
             newJoint.transform.position = GetEdgeCenter(newSegment, true);
             newJoint.transform.parent = newSegment.transform;
 
@@ -186,6 +181,13 @@ public class CreateScene : MonoBehaviour
         spawnedObjects[2, 0] = endSphere;
     }
 
+    /// <summary>
+    /// Gets the bounds' top or bottom face center point position.
+    /// <parameters>
+    /// obj (GameObject): The object the function will obtain its center point.
+    /// isTop (bool): bool that defines if the center point will be from the top face or bottom face.
+    /// <returns>
+    /// The position of the center point (Vector3)
     public Vector3 GetEdgeCenter(GameObject obj, bool isTop)
     {
         var bounds = obj.GetComponent<MeshRenderer>().bounds;
@@ -193,6 +195,12 @@ public class CreateScene : MonoBehaviour
                     : bounds.center - obj.transform.up * bounds.extents.y;
     }
 
+    /// <summary>
+    /// Makes a copy of the values of an array.
+    /// <parameters>
+    /// originalArray (List<Vector3>): Array that will be copied
+    /// <returns>
+    /// arrayCopy (List<Vector3>): Copy of the original array
     public List<Vector3> DeepCopy(List<Vector3> originalArray)
     {
 

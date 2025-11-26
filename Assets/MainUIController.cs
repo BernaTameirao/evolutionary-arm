@@ -14,7 +14,6 @@ public class MainUIController : MonoBehaviour
     private Evolution EvScript;
     private CreateScene SceneScript;
     private PathFinding PathFind;
-    //private DStarPathFinding DStarScript;
     private Gridi GridScript;
     private RobotGrid RobotGridScript;
     private FpsCounter FpsScript;
@@ -25,19 +24,18 @@ public class MainUIController : MonoBehaviour
     private int sliderValue;
     private int[] newValuesFromInputs;
     private bool isShowingPath = true;
-    private GameObject clickedObject;
+    private GameObject previousObjectClicked;
 
     public bool isCollectingData = false;
     private int simulationCounter = 0;
     
-    private bool isShowingFog = true;
+    private bool isShowingFog = false;
 
     void Start()
     {
         EvScript = GetComponent<Evolution>();
         SceneScript = GetComponent<CreateScene>();
         PathFind = GetComponent<PathFinding>();
-        //DStarScript = GetComponent<DStarPathFinding>();
         GridScript = GetComponent<Gridi>();
         RobotGridScript = GetComponent<RobotGrid>();
         FpsScript = GetComponent<FpsCounter>();
@@ -139,77 +137,92 @@ public class MainUIController : MonoBehaviour
         childrenArray[2].text = "Number of joints: " + uiData[2];
         childrenArray[3].text = "Population size: " + uiData[3];
         childrenArray[4].text = "MaxStep: " + uiData[4];
-        //childrenArray[5].text = "Generations per objective: " + uiData[5];
         childrenArray[5].text = "Segment lenght: " + uiData[5];
-        childrenArray[6].text = "Minimum obstacle distance (Real): " + uiData[6];
-        childrenArray[7].text = "Minimum obstacle distance (Robot Perception): " + uiData[7];
-        childrenArray[8].text = "Simulation Counter: " + simulationCounter;
-        childrenArray[9].text = "Fitness Type: " + EvScript.whichFitness;
-        childrenArray[10].text = "FPS: " + FpsScript.getFPS();
+        childrenArray[6].text = "Goal Distance: " + uiData[6];
+        childrenArray[7].text = "Minimum obstacle distance (Real): " + uiData[7];
+        childrenArray[8].text = "Minimum obstacle distance (Robot Perception): " + uiData[8];
+        childrenArray[9].text = "Simulation Counter: " + simulationCounter;
+        childrenArray[10].text = "Fitness Type: " + EvScript.whichFitness;
+        childrenArray[11].text = "FPS: " + FpsScript.getFPS();
 
         HandleMovement();
 
     }
     
+    /// <summary>
+    /// Controls the movement of the objects clicked by the user, and the camera.
     private void HandleMovement(){
-
+        
+        // Gets the object clicked by the user using raycast
         GameObject objectClicked = SelectorScript.getClickedObject();
 
-        if(objectClicked!= null){
-
+        if(objectClicked != null){
+            
+            // Camera movement is deactivated
             cameraScript.deactivate();
+            
+            // If the object clicked is different from the previous, destroy its script to prevent unwanted movement.
+            if(objectClicked != previousObjectClicked && previousObjectClicked != null){
 
-            if(objectClicked != clickedObject && clickedObject != null){
-
-                Destroy(clickedObject.GetComponent<MoveObject>());
+                Destroy(previousObjectClicked.GetComponent<MoveObject>());
             }
+            
+            previousObjectClicked = objectClicked;
 
-            clickedObject = objectClicked;
-            if(clickedObject.GetComponent<MoveObject>() == null){
+            // Adds the movement script if it didn't exist before
+            if(previousObjectClicked.GetComponent<MoveObject>() == null){
 
-                clickedObject.AddComponent<MoveObject>();
-                clickedObject.GetComponent<MoveObject>().cameraTransform = mainCamera.transform;
+                previousObjectClicked.AddComponent<MoveObject>();
+                previousObjectClicked.GetComponent<MoveObject>().cameraTransform = mainCamera.transform;
             }
 
         } else {
-
+            
+            // Camera movement is activated if no object is clicked by the user
             cameraScript.activate();
 
-            if( clickedObject != null){
+            // Destroy the script of the previous object to prevent unwanted movement.
+            if(previousObjectClicked != null){
 
-                Destroy(clickedObject.GetComponent<MoveObject>());
+                Destroy(previousObjectClicked.GetComponent<MoveObject>());
             }
         }
     }
 
-    // Generic click handler
+    /// <summary>
+    /// Generic click handler
+    /// <parameters>
+    /// buttonName (string): Name of the button.
     private void OnButtonClicked(string buttonName)
     {
 
         switch (buttonName)
         {
+            // Used to change the number of obstacles in the environment
             case "ChangeObstacles":
 
-                EvScript.clearObstacles();
-                SceneScript.createRandomObstacles(sliderValue);
-                resetSimulation();
+                resetSimulationWithObstacles();
                 break;
 
+            // Used to change the number of max generations
             case "ChangeGeneration":
                 EvScript.maxGenerations = newValuesFromInputs[0];
                 resetSimulation();
-                break;
+                break;  
 
+            // Used to change the number of individuals in a population
             case "ChangePopulation":
                 EvScript.popSize = newValuesFromInputs[1];
                 resetSimulation();
                 break;
 
+            // Used to change the max mutation value
             case "ChangeMaxStep":
                 EvScript.maxStep = newValuesFromInputs[2];
                 resetSimulation();
                 break;
 
+            // Used to show/hide the a* path
             case "ShowPath":
                 isShowingPath = !isShowingPath;
             
@@ -222,6 +235,7 @@ public class MainUIController : MonoBehaviour
                 }
                 break;
 
+            // Used to change the number of segments on the robotic arm
             case "ChangeNumSegments":
                 SceneScript.destroyRobotArm();
                 SceneScript.N = newValuesFromInputs[3];
@@ -229,18 +243,21 @@ public class MainUIController : MonoBehaviour
                 resetSimulation();
                 break;
 
+            // Reset the simulation
             case "ResetAStar":
                 resetSimulation();
                 break;
 
+            // Used to start collecting data
             case "CollectData":
-                EvScript.maxGenerations = 2300;
+                EvScript.maxGenerations = 8000;
                 simulationCounter = 0;
                 isCollectingData = true;
                 //EvScript.clearObstacles();
                 resetSimulationWithObstacles();
                 break;
 
+            // Used to activate/deactivate the fog of war
             case "FogOfWar":
                 isShowingFog = !isShowingFog;
 
@@ -264,6 +281,8 @@ public class MainUIController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Soft resets the simulation and keeps the same environment and grid.
     public void resetSimulation() {
 
         PathFind.Awake();
@@ -271,20 +290,28 @@ public class MainUIController : MonoBehaviour
         PathFind.activate();
     }
 
+    /// <summary>
+    /// Hard resets the simulation, changes the environment and remakes the grid.
     public void resetSimulationWithObstacles() {
         
         EvScript.clearObstacles();
-        SceneScript.createRandomObstacles(sliderValue);
+        SceneScript.createRandomObstacles(sliderValue, !SceneScript.isCreatingTunnels);
         PathFind.Awake();
         EvScript.Awake();
         PathFind.activate();
     }
 
+    /// <summary>
+    /// Returns the simulation counter.
     public int getSimulationCounter(){
 
         return simulationCounter;
     }
 
+    /// <summary>
+    /// Sets a value into the simulation counter.
+    /// <parameters>
+    /// n (int): the value.
     public void setSimulationCounter(int n){
 
         if(n == -1){

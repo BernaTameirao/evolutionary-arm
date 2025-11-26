@@ -57,16 +57,16 @@ public class Evolution : MonoBehaviour
     public int whichFitness = 1;
 
     private MainUIController UIScript;
-    private float[] totalSumDistanceDestination = new float[2300];
-    private float[] totalSumDistanceObstacleReal = new float[2300];
-    private float[] totalSumDistanceObstacleRobot = new float[2300];
-    private Transform finalPosition;
+    private float[] totalSumDistanceDestination = new float[8000];
+    private float[] totalSumDistanceObstacleReal = new float[8000];
+    private float[] totalSumDistanceObstacleRobot = new float[8000];
+    private Vector3 finalPosition;
     //private float[,] differenceAngles = new float[9, 2300];
     private List<Vector3> previousRobotState = new List<Vector3>();
 
     //Mudança Fog of War
     private RobotGrid robotGridScript;
-    public bool isShowingFog = true;
+    public bool isShowingFog = false;
 
     public void Awake(){
         //gets the relevant infos from the createscene and pathFinding script
@@ -75,12 +75,10 @@ public class Evolution : MonoBehaviour
         segmentLength = SceneScript.distJoints;
         armParts = SceneScript.spawnedObjects;
         astarScript = GetComponent<PathFinding>();
-        //dstarScript = GetComponent<DStarPathFinding>();
         gridScript = GetComponent<Gridi>();
         UIScript = GetComponent<MainUIController>();
-
-        //Mudança Fog of War
         robotGridScript = GetComponent<RobotGrid>();
+
         
         generation = 1;
         //start to write into the file
@@ -117,6 +115,8 @@ public class Evolution : MonoBehaviour
         armParts = SceneScript.spawnedObjects;
     }
 
+    /// <summary>
+    /// Creates a queue matching the a* path created.
     private void createPathQueue() {
         //gets the path found by the a* algorithm and enqueue them into the queue
         pathQueue = new Queue<Node>();
@@ -128,25 +128,20 @@ public class Evolution : MonoBehaviour
 
     }
 
-    //activates the Update method allowing it to happen, used by the PathFinding script to start the evolution script
+    /// <summary>
+    /// Activates the Update method allowing it to happen, used by the PathFinding script to start the evolution script
     public void activate() {
         this.enabled = true;
-        finalPosition = goal.transform;
+        finalPosition = goal.transform.position;
         createPathQueue();
-        //starts the time count
-        /*if(maxGenerations != -1)
-            sw.Start();*/
-    }
-    //the never ending loop of evaluating a population, displaying the best configuration and generating a new population based on the previous best one
-    void Update(){
-        //if this happens, it means it's time to use the next point in the path as the goal and so I update the goal
-        /*if(generation % generationsPerObjective == 0) {
-            if(pathQueue.Count != 0) {
-                Node aux = pathQueue.Dequeue();
-                goal.transform.position = aux.worldPosition;
-            }
-        }*/
 
+    }
+
+    /// <summary>
+    /// The never ending loop of evaluating a population, displaying the best configuration and generating a new population based on the previous best one
+    void Update(){
+
+        // if this happens, it means it's time to use the next point in the path as the goal and so I update the goal
         if(Vector3.Distance(simulatedArm(robotState), goal.transform.position) < 0.07f) {
             if(pathQueue.Count != 0) {
                 Node aux = pathQueue.Dequeue();
@@ -154,59 +149,54 @@ public class Evolution : MonoBehaviour
             }
         }
 
+        // Defines the fitness function that will be used.
         switch(whichFitness){
             case 1:
-                fitnessEvaluation4();
-                break;
-
-            case 2:
-                fitnessEvaluation5();
-                break;
-
-            case 3:
                 fitnessEvaluation2();
                 break;
 
+            case 2:
+                fitnessEvaluation();
+                break;
+
+            case 3:
+                fitnessEvaluation3();
+                break;
+
             case 4:
-                fitnessEvaluation1();
+                fitnessEvaluation4();
                 break;
 
             case 5:
-                fitnessEvaluation3();
+                fitnessEvaluation5();
                     break;
 
             default:
                 break;
         }
 
+        // Collects the distance to the goal and the distance to the closest obstacle.
         if(UIScript.isCollectingData){
-            totalSumDistanceDestination[generation-1] += Vector3.Distance(finalPosition.position, simulatedArm(robotState));
+            totalSumDistanceDestination[generation-1] += Vector3.Distance(finalPosition, simulatedArm(robotState));
             totalSumDistanceObstacleRobot[generation-1] += distanceObstacles(robotState);
             totalSumDistanceObstacleReal[generation-1] += (float)((gridScript.layers - closestNodeToObstacle(robotState).layer) * gridScript.nodeDiameter);
-
-            /*for(int counter=0; counter<N; counter++){
-                
-                differenceAngles[counter, generation-1] += Mathf.Abs(robotState[counter] - previousRobotState[counter]);
-            }*/
         }
 
         updateObject();
         newPopulation();
         checkObstacles();
 
-        //Mudança Fog of War
+        // Check for unseen obstacles if fog of war is active.
         if(isShowingFog){
             checkHiddenObstacles();
         }
 
-        //previousRobotState = robotState;
         //prints the generation and best fitness, i intend to make this to be written into a text file for another program to read and plot
         if(maxGenerations != -1) {
             //makes the update method stop when a certain number of generations is reached
             //logFile.WriteLine(generation + ", " + previousBestfitness + ", " + distanceObstacles(robotState));
             if(generation >= maxGenerations) {
                 //writes data to the file and closes it
-                //endProgram();
                 if(UIScript.isCollectingData && UIScript.getSimulationCounter() < 49){
 
                     this.enabled = false;
@@ -215,7 +205,7 @@ public class Evolution : MonoBehaviour
 
                 } else{
 
-                    for(int counter=0; counter<2300; counter++){
+                    for(int counter=0; counter<8000; counter++){
 
                         totalSumDistanceDestination[counter] /= 50;
                         totalSumDistanceObstacleReal[counter] /= 50;
@@ -224,21 +214,14 @@ public class Evolution : MonoBehaviour
                         logFile.WriteLine(totalSumDistanceDestination[counter] + ". " + totalSumDistanceObstacleReal[counter] + ". "+ 
                                         totalSumDistanceObstacleRobot[counter] +". " + counter + ". " + whichFitness);
                         
-                        /*for(int counter2=0; counter2<N; counter2++){
-
-                            differenceAngles[counter2, counter] /= 50;
-                        }
-
-                        logFile.WriteLine(differenceAngles[0, counter] + ". " + differenceAngles[1, counter] + ". " + differenceAngles[2, counter] 
-                                        + ". " + differenceAngles[3, counter] + ". " + differenceAngles[4, counter]);*/
                     }
                     
                     logFile.Flush();
 
-                    totalSumDistanceDestination = new float[2300];
-                    totalSumDistanceObstacleReal = new float[2300];
-                    totalSumDistanceObstacleRobot = new float[2300];
-                    //differenceAngles = new float[N, 2300];
+                    totalSumDistanceDestination = new float[8000];
+                    totalSumDistanceObstacleReal = new float[8000];
+                    totalSumDistanceObstacleRobot = new float[8000];
+
                     whichFitness +=1;
 
                     if (whichFitness>3){
@@ -254,6 +237,8 @@ public class Evolution : MonoBehaviour
         generation++;
     }
 
+    /// <summary>
+    /// Update the position of the robotic arm on the environment.
     public void updateObject(){
 
         Quaternion rotation = Quaternion.identity;
@@ -282,29 +267,21 @@ public class Evolution : MonoBehaviour
         previousRobotState = SceneScript.DeepCopy(robotState);
     }
 
-    public void addObstacle(GameObject a) {
-        a.transform.hasChanged = false;
-        obstaclesList.Add(a);
+    /// <summary>
+    /// Add an obstacle to the list.
+    /// <parameters>
+    /// obj (GameObject): the object.
+    public void addObstacle(GameObject obj) {
+        obj.transform.hasChanged = false;
+        obstaclesList.Add(obj);
 
     }
 
-    /*public void clearObstacles() {
-
-        foreach (var obj in obstaclesList)
-        {
-            if (obj != null)
-            {
-                Destroy(obj);
-            }
-        }
-        obstaclesList.Clear();
-
-        //Mudança Fog of War
-        obstaclesListFound.Clear();
-    }*/
-
+    /// <summary>
+    /// Deactivates every obstacle and clear the lists.
     public void clearObstacles()
-    {
+    {   
+        // Deactivates every obstacle
         foreach (var obstacle in obstaclesList)
         {
             if (obstacle != null)
@@ -314,39 +291,45 @@ public class Evolution : MonoBehaviour
             }
         }
         obstaclesList.Clear();
-
-        // Mudança Fog of War
         obstaclesListFound.Clear();
     }
     
-    void checkObstacles() {//checks if an obstacle has moved
+    /// <summary>
+    /// Checks if an obstacle has moved and remakes the grid
+    void checkObstacles() {
         foreach(GameObject obstacle in obstaclesList) {
+            // If the position of an object has changed and it stopped moving
             if (obstacle.transform.hasChanged == true) {
                 if(obstacle.GetComponent<CheckMovement>().isMoving == false) {
+                    // Recreates the main grid
                     gridScript.RecreateGrid(obstacle);
 
-                    //Mudança Fog of War
+                    // If fog of war is activated and the obstacle has been found, recreates the secondary grid
                     if(obstaclesListFound.Contains(obstacle)){
                         robotGridScript.RecreateGrid(obstacle);
                     }
 
-                    //gridScript.createGrid();
                     obstacle.transform.hasChanged = false;
                 }
             }
         }
     }
 
-    //Mudança Fog of War
+    /// <summary>
+    /// Checks for obstacles, that are close to the manipulator and hidden on the secondary grid.
     void checkHiddenObstacles(){
         
+        // Gets the closest node
         Node closestNode = closestNodeToObstacle(robotState);
 
+        // If the manipulator touches that node
         if(closestNode!=null && gridScript.layers - closestNode.layer <= 0){
             
+            // Gets the collider of any obstacle in that node
             Collider[] colliders = Physics.OverlapSphere(closestNode.worldPosition, gridScript.nodeDiameter, gridScript.unwalkableMask);
             foreach (Collider col in colliders){
                 
+                // If the obstacle has not been found
                 if(!obstaclesListFound.Contains(col.gameObject)){
                     
                     List<Vector3> auxList = new List<Vector3>();
@@ -354,10 +337,14 @@ public class Evolution : MonoBehaviour
                         auxList.Add(new Vector3(n.gridX, n.gridY, n.gridZ));
                     }
 
+                    // Updates the found obstacles list, and the secondary grid.
                     obstaclesListFound.Add(col.gameObject);
                     robotGridScript.AddObstacleToGrid(col.gameObject);
+
+                    // Changes the obstacle color to red, to show it has been found.
                     col.gameObject.GetComponent<Renderer>().material.color = Color.red;
 
+                    // If the new obstacle is blocking the a* path, recreates the path.
                     Node[,,] auxGrid = robotGridScript.grid;
                     foreach (Vector3 n in auxList){
 
@@ -374,8 +361,6 @@ public class Evolution : MonoBehaviour
                                 newNode = auxGrid[auxNode.gridX, auxNode.gridY, auxNode.gridZ];
                             }
                             astarScript.ChangePath(newNode.worldPosition);
-                            /*dstarScript.MoveAndUpdate(newNode.worldPosition, col.gameObject);
-                            createPathQueue();*/
                             break;
                         }
                     }
@@ -384,6 +369,8 @@ public class Evolution : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Function that writes the general configurations into the file, but only after everything was collected.
     void endProgram() {
         sw.Stop();
         logFile.WriteLine("/------------------------------------------------/");
@@ -392,50 +379,15 @@ public class Evolution : MonoBehaviour
         logFile.WriteLine("Number of joints: " + N);
         logFile.WriteLine("Population size: " + popSize);
         logFile.WriteLine("MaxStep: " + maxStep);
-        logFile.WriteLine("Generations per objective: " + generationsPerObjective);
-        logFile.WriteLine("Segment lenght: " + segmentLength);
+        logFile.WriteLine("Segment length: " + segmentLength);
         logFile.Dispose();
         Application.Quit();
         this.enabled = false;
     }
 
-    void fitnessEvaluation1() {
-        //the bestInd saves what is the best one in the popStates
-        int bestInd = -1;
-        //the distance to obstacles is now also taken into account to determine the fitness.
-        //this calculation is needed in the case of the goal moving, so that the bestFitness is recalculated, if it were a gloval variable and this wasn't done, it would save a fitness from a different goal or, in other words, another problem
-        float distAux = distanceObstacles(robotState);//calculated only once, as this is the most CPU expensive element of the calculation
-        float bestFitness;
-        bool considerObstacles = false;
-        if(distAux < segmentLength) {
-            bestFitness = 1/Vector3.Distance(simulatedArm(robotState), goal.transform.position) + distAux + distanceObstaclesFromPoint(simulatedArm(robotState))/10; //simplified the calculation and have unlimited both parts of the fitness calculation
-            considerObstacles = true;
-        }
-        else
-            bestFitness = 1/Vector3.Distance(simulatedArm(robotState), goal.transform.position);
-        //this fitness calculation takes the distance to objectivo into a max value capped when the distance is smaller than a fourth of the distJoint and tops the distance to obstacles to a max of distJoint so that it wont get any more value of getting further than a joint distance
-        for (int i = 0; i < popSize; i++){
-            //calculated the fitness, or distance to the goal
-            float fitness;
-            //calculated only once, as this is the most CPU expensive element of the calculation 
-            if(considerObstacles){
-                float distAux2 = distanceObstacles(popStates[i]);
-                
-                fitness = 1/Vector3.Distance(simulatedArm(popStates[i]), goal.transform.position) + distAux2 + distanceObstaclesFromPoint(simulatedArm(popStates[i]))/10; // also considering the tip of the arm, but in a lower cost
-            }
-            else
-                fitness = 1/Vector3.Distance(simulatedArm(popStates[i]), goal.transform.position);
-            //checks if its better and saves its configuration
-            if(fitness > bestFitness){
-                bestInd = i;
-                bestFitness = fitness;
-                robotState = new List<Vector3>(popStates[bestInd]);
-            }
-        }
-        previousBestfitness = bestFitness;
-    }
-
-    void fitnessEvaluation2() {
+    /// <summary>
+    /// Conservative fitness function. Prioritizes the non-colision with obstacles more than reach the final goal. 
+    void fitnessEvaluation() {
         //the bestInd saves what is the best one in the popStates
         int bestInd = -1;
         //the distance to obstacles is now also taken into account to determine the fitness.
@@ -446,8 +398,7 @@ public class Evolution : MonoBehaviour
             //calculated the fitness, or distance to the goal
             
             float fitness = Mathf.Min(1/Vector3.Distance(simulatedArm(popStates[i]), goal.transform.position), 10/SceneScript.distJoints) - 1/Mathf.Pow(distanceObstacles(popStates[i]), 2);
-            /*print(Mathf.Min(1/Vector3.Distance(simulatedArm(popStates[i]), goal.transform.position), 10/GetComponent<CreateScene>().distJoints));
-            print(1/Mathf.Pow(distanceObstacles(popStates[i]), 2));*/
+
             //checks if its better and saves its configuration
             if(fitness > bestFitness){
                 bestInd = i;
@@ -458,48 +409,9 @@ public class Evolution : MonoBehaviour
         previousBestfitness = bestFitness;
     }
 
-    void fitnessEvaluation3() {
-        //the bestInd saves what is the best one in the popStates
-        int bestInd = -1;
-        //the distance to obstacles is now also taken into account to determine the fitness.
-        //this calculation is needed in the case of the goal moving, so that the bestFitness is recalculated, if it were a gloval variable and this wasn't done, it would save a fitness from a different goal or, in other words, another problem
-        float valueAux;
-        float dist = distanceObstacles(robotState);
-        if(dist < 0){
-
-            valueAux = 0;
-        } else {
-
-            valueAux = Mathf.Sqrt(dist);
-        }
-
-        float bestFitness = Mathf.Min(1/Vector3.Distance(simulatedArm(robotState), goal.transform.position), 4/SceneScript.distJoints) + Mathf.Min(SceneScript.distJoints, valueAux);
-        //this fitness calculation takes the distance to objectivo into a max value capped when the distance is smaller than a fourth of the distJoint and tops the distance to obstacles to a max of distJoint so that it wont get any more value of getting further than a joint distance
-        for (int i = 0; i < popSize; i++){
-            //calculated the fitness, or distance to the goal
-
-            dist = distanceObstacles(popStates[i]);
-            if(dist < 0){
-
-                valueAux = 0;
-            } else {
-
-                valueAux = Mathf.Sqrt(dist);
-            }
-            
-            float fitness = Mathf.Min(1/Vector3.Distance(simulatedArm(popStates[i]), goal.transform.position), 4/SceneScript.distJoints) + Mathf.Min(SceneScript.distJoints, valueAux);
-            //checks if its better and saves its configuration
-            
-            if(fitness > bestFitness){
-                bestInd = i;
-                bestFitness = fitness;
-                robotState = new List<Vector3>(popStates[bestInd]);
-            }
-        }
-        previousBestfitness = bestFitness;
-    }
-
-    void fitnessEvaluation4() {
+    /// <summary>
+    /// Aggressive fitness function. Prioritizes reaching the goal more than making sure the avoiding of obstacles.
+    void fitnessEvaluation2() {
         //the bestInd saves what is the best one in the popStates
         int bestInd = -1;
         //the distance to obstacles is now also taken into account to determine the fitness.
@@ -521,7 +433,9 @@ public class Evolution : MonoBehaviour
         previousBestfitness = bestFitness;
     }
 
-    void fitnessEvaluation5() {
+    /// <summary>
+    /// Moderate fitness function. Gives similar importance to both tasks.
+    void fitnessEvaluation3() {
         //the bestInd saves what is the best one in the popStates
         int bestInd = -1;
         float bestFitness = -Vector3.Distance(simulatedArm(robotState), goal.transform.position) + distanceObstacles(robotState);
@@ -538,16 +452,67 @@ public class Evolution : MonoBehaviour
         previousBestfitness = bestFitness;
     }
 
-    //Modo Fog of War
+    void fitnessEvaluation4() {
+        //the bestInd saves what is the best one in the popStates
+        int bestInd = -1;
+        //the distance to obstacles is now also taken into account to determine the fitness.
+        //this calculation is needed in the case of the goal moving, so that the bestFitness is recalculated, if it were a gloval variable and this wasn't done, it would save a fitness from a different goal or, in other words, another problem
+        float auxObstacles = distanceObstacles(robotState);
+        float bestFitness = 1/(1 + Vector3.Distance(simulatedArm(robotState), goal.transform.position)) - 3* Mathf.Max(0, 0.04f - auxObstacles);
+        //this fitness calculation takes the distance to objectivo into a max value capped when the distance is smaller than a fourth of the distJoint and tops the distance to obstacles to a max of distJoint so that it wont get any more value of getting further than a joint distance
+        for (int i = 0; i < popSize; i++){
+            //calculated the fitness, or distance to the goal
+            auxObstacles = distanceObstacles(popStates[i]);
+            float fitness = 1/(1 + Vector3.Distance(simulatedArm(popStates[i]), goal.transform.position)) - 3* Mathf.Max(0, 0.04f - auxObstacles);
+            //checks if its better and saves its configuration
+            if(fitness > bestFitness){
+                bestInd = i;
+                bestFitness = fitness;
+                robotState = new List<Vector3>(popStates[bestInd]);
+            }
+        }
+        previousBestfitness = bestFitness;
+    }
+
+    void fitnessEvaluation5() {
+        //the bestInd saves what is the best one in the popStates
+        int bestInd = -1;
+        //the distance to obstacles is now also taken into account to determine the fitness.
+        //this calculation is needed in the case of the goal moving, so that the bestFitness is recalculated, if it were a gloval variable and this wasn't done, it would save a fitness from a different goal or, in other words, another problem
+        float auxObstacles = distanceObstacles(robotState);
+        float bestFitness = 1/(1 + Vector3.Distance(simulatedArm(robotState), goal.transform.position)) - 2* Mathf.Max(0, 0.06f - auxObstacles);
+        //this fitness calculation takes the distance to objectivo into a max value capped when the distance is smaller than a fourth of the distJoint and tops the distance to obstacles to a max of distJoint so that it wont get any more value of getting further than a joint distance
+        for (int i = 0; i < popSize; i++){
+            //calculated the fitness, or distance to the goal
+            auxObstacles = distanceObstacles(popStates[i]);
+            float fitness = 1/(1 + Vector3.Distance(simulatedArm(popStates[i]), goal.transform.position)) - 2* Mathf.Max(0, 0.06f - auxObstacles);
+            //checks if its better and saves its configuration
+            if(fitness > bestFitness){
+                bestInd = i;
+                bestFitness = fitness;
+                robotState = new List<Vector3>(popStates[bestInd]);
+            }
+        }
+        previousBestfitness = bestFitness;
+    }
+
+    /// <summary>
+    /// Gets the distance from the closest obstacle on the secondary grid.
     float distanceObstaclesFromPointRobot(Vector3 point) {
         Node place = robotGridScript.NodeFromWorldPoint(point);
 
         return (gridScript.layers - place.layer) * gridScript.nodeDiameter;
     }
 
+    /// <summary>
+    /// Gets the distance from the closest obstacle on the main grid.
+    float distanceObstaclesFromPoint(Vector3 point) {
+        Node place = gridScript.NodeFromWorldPoint(point);
+
+        return (gridScript.layers - place.layer) * gridScript.nodeDiameter;
+    }
+
     float distanceObstacles(List<Vector3> angles) {
-        //Mudança Fog of War
-        //if(obstaclesListFound.Count == 0) return 0; //a 0 value means no obstacle exists and thus it shouldn't be considered
         
         GameObject baseRobot = robot.transform.GetChild(0).gameObject;
         Vector3 position = baseRobot.transform.position;
@@ -565,7 +530,7 @@ public class Evolution : MonoBehaviour
             position += rotation * Vector3.up * segmentLength; // Move along local Y axis
 
             float minDistanceCurrentJoint;
-            //Mudança Fog of War
+  
             if(isShowingFog){
 
                 minDistanceCurrentJoint = distanceObstaclesFromPointRobot(position);
@@ -579,12 +544,6 @@ public class Evolution : MonoBehaviour
         }
 
         return distance;
-    }
-
-    float distanceObstaclesFromPoint(Vector3 point) {
-        Node place = gridScript.NodeFromWorldPoint(point);
-
-        return (gridScript.layers - place.layer) * gridScript.nodeDiameter;
     }
 
     //Mudança Fog of War
@@ -608,7 +567,6 @@ public class Evolution : MonoBehaviour
             float minDistanceCurrentJoint = distanceObstaclesFromPoint(position);
 
             //compares to see if it is any smaller than the closest distance yet
-            //distance = Mathf.Min(minDistanceCurrentJoint, distance);
             if(distance >= minDistanceCurrentJoint){
 
                 distance = minDistanceCurrentJoint;
@@ -619,7 +577,10 @@ public class Evolution : MonoBehaviour
         return closestNode;
     }
 
-    //does the math to calculate the end position given a set of angles
+    /// <summary>
+    /// Does the math to calculate the end position given a set of angles
+    /// <parameters>
+    /// evaluated (List<Vector3>) The set of angles of each segment of the robotic arm.
     Vector3 simulatedArm(List<Vector3> evaluated) {
         //the position starts at the base position
         GameObject baseRobot = robot.transform.GetChild(0).gameObject;
@@ -642,8 +603,10 @@ public class Evolution : MonoBehaviour
         return position;
     }
 
+    /// <summary>
+    /// Generates a new population.
     void newPopulation(){
-        // Generate new population
+
         if(generation % 100 == 0) {
             mutRate = Mathf.Max((mutRate + 1) % N, 1);//the mutation keeps changing every 100 generations and it means the number of joint that are gonna be changed
         }
@@ -658,9 +621,16 @@ public class Evolution : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Gets the data that will be sent to UI.
+    /// <returns>
+    /// The data (float[])
     public float[] getUIData() {
 
         float elapsedMilliseconds = (sw != null) ? (float)sw.ElapsedMilliseconds : -1;
+        float goalDist = (finalPosition != null) ? (Vector3.Distance(finalPosition, simulatedArm(robotState))) : -1;
+        float realObstDist = ((gridScript.layers - closestNodeToObstacle(robotState).layer) * gridScript.nodeDiameter);
+        float perceptionObstDist = distanceObstacles(robotState);
 
         return new float[]
         {
@@ -669,13 +639,17 @@ public class Evolution : MonoBehaviour
             (float)N, 
             (float)popSize, 
             maxStep, 
-            //(float)generationsPerObjective, 
             segmentLength,
-            (float)((gridScript.layers - closestNodeToObstacle(robotState).layer) * gridScript.nodeDiameter),
-            distanceObstacles(robotState)
+            goalDist,
+            realObstDist,
+            perceptionObstDist
         };
     }
 
+    /// <summary>
+    /// Sets the fog of war enabledness.
+    /// <parameters>
+    /// value (bool): the value.
     public void setFogOfWar(bool value){
 
         isShowingFog = value;

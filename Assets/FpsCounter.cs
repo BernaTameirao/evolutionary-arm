@@ -18,6 +18,8 @@ public class FpsCounter : MonoBehaviour
         fps = (int)Mathf.Ceil(1.0f / deltaTime);
     }
 
+    /// <summary>
+    /// Returns the fps
     public int getFPS(){
 
         return fps;

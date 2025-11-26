@@ -8,7 +8,6 @@ public class MoveObject : MonoBehaviour
     public float rotationSpeed = 100f;
 
     public Transform cameraTransform;
-    //public KeyCode[] keys;
 
     void Update()
     {
@@ -16,23 +15,14 @@ public class MoveObject : MonoBehaviour
         float moveY = 0f; 
         float moveZ = 0f;
 
-        /*if (Input.GetKey(keys[0])) moveX = 1f;
-        if (Input.GetKey(keys[1])) moveX = -1f;
+        if (Input.GetKey(KeyCode.D)) moveX = 1f; // moves to the right
+        if (Input.GetKey(KeyCode.A)) moveX = -1f; // moves to the left
 
-        if (Input.GetKey(keys[2])) moveZ = 1f;
-        if (Input.GetKey(keys[3])) moveZ = -1f;
+        if (Input.GetKey(KeyCode.W)) moveZ = 1f;  // moves frontward
+        if (Input.GetKey(KeyCode.S)) moveZ = -1f; // moves backward
         
-        if (Input.GetKey(keys[4])) moveY = 1f;   // Move up
-        if (Input.GetKey(keys[5])) moveY = -1f; // Move down*/
-
-        if (Input.GetKey(KeyCode.D)) moveX = 1f;
-        if (Input.GetKey(KeyCode.A)) moveX = -1f;
-
-        if (Input.GetKey(KeyCode.W)) moveZ = 1f;
-        if (Input.GetKey(KeyCode.S)) moveZ = -1f;
-        
-        if (Input.GetKey(KeyCode.Z)) moveY = 1f;   // Move up
-        if (Input.GetKey(KeyCode.X)) moveY = -1f; // Move down
+        if (Input.GetKey(KeyCode.Z)) moveY = 1f;   // Moves up
+        if (Input.GetKey(KeyCode.X)) moveY = -1f; // Moves down
 
         Vector3 moveDirection;
 
@@ -45,16 +35,16 @@ public class MoveObject : MonoBehaviour
         cameraRight.y = 0f;
         cameraRight.Normalize();
 
+        // Moves accordingly to the camera
         moveDirection = (cameraRight * moveX + cameraForward * moveZ + cameraUp * moveY).normalized;
 
         float rotate = 0f;
-        if(Input.GetKey(KeyCode.Q)) rotate = 1f;
-        if(Input.GetKey(KeyCode.E)) rotate = -1f;
+        if(Input.GetKey(KeyCode.Q)) rotate = 1f; // rotates to the left
+        if(Input.GetKey(KeyCode.E)) rotate = -1f; // rotates to the right
 
         transform.Rotate(Vector3.up, rotate*rotationSpeed*Time.deltaTime, Space.World);
 
         transform.Translate(moveDirection * moveSpeed * Time.deltaTime, Space.World);
-
     }
 
     public void activate(){

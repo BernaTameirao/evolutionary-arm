@@ -50,7 +50,10 @@ public class ObjectSelector : MonoBehaviour
         }
     }
 
-    // Example method to highlight the clicked object
+    /// <summary>
+    /// Highlights the object, changing its color
+    /// <parameters>
+    /// obj (GameObject): The object that will be highlighted
     private void HighlightObject(GameObject obj)
     {
         Renderer renderer = obj.GetComponent<Renderer>();
@@ -62,6 +65,8 @@ public class ObjectSelector : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Reset the object color to the original
     private void ResetObjectColor()
     {
         Renderer renderer = previousObject.GetComponent<Renderer>();
@@ -72,6 +77,8 @@ public class ObjectSelector : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Returns the clicked object.
     public GameObject getClickedObject(){
 
         return clickedObject;

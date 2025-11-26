@@ -17,7 +17,9 @@ public class PathFinding : MonoBehaviour
     private Vector3 startPosition;
     private Vector3 endPosition;
 
-    //public Evolution evolutionScript;
+    //20 - LimiteAproxima é o mais perto que a rota do A* passa dos obstaculos
+    private int LimiteAproxima = 17;
+
     public void Awake()
     {
         EvScript = GetComponent<Evolution>();
@@ -93,9 +95,9 @@ public class PathFinding : MonoBehaviour
                 {
                     continue;
                 }
-
+                // Esse trecho calcula a rota do A*, e utiliza somentes os nós com layer especificado. 20 - LimiteAproxima e´ o mais perto que a rota do A* passa dos obstaculos
                 float newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour);
-                if (newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour))
+                if ((newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour)) && neighbour.layer < LimiteAproxima)
                 {
                     neighbour.gCost = newMovementCostToNeighbour;
                     neighbour.hCost = GetDistance(neighbour, targetNode);
